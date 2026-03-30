@@ -86,4 +86,16 @@ This is the place for you to write reflections:
 
 #### Reflection Subscriber-1
 
+1. Karena framework web seperti Rocket memproses request secara multi-threading (banyak thread berjalan bersamaan), kita butuh mekanisme pengunci (lock) agar data Vec notifikasi kita tidak rusak saat diakses berbarengan (data race).
+
+Mutex (Mutual Exclusion): Sangat ketat. Hanya membolehkan 1 thread saja yang mengakses data pada satu waktu, entah itu untuk membaca atau menulis. Thread yg lain jadi haru antri.
+
+RwLock (Read-Write Lock): Lebih fleksibel. Memperbolehkan banyak thread membaca data secara bersamaan (asalkan tidak ada yang sedang menulis). Tapi kalau ada yang mau menulis, baru ia akan mengunci semuanya.
+Di aplikasi Receiver ini, operasi membaca daftar notifikasi kemungkinan akan dilakukan lebih sering oleh user secara bersamaan. Kalau pakai Mutex, proses read saja harus saling tunggu sehingga bikin program jadi lambat. Dengan RwLock, banyak user bisa melihat notifikasi secara barengan tanpa harus mengantri, sehingga kinerjanya jadi jauh lebih optimal.
+
+
+2. Di Java, variabel static memang bisa diubah kapan saja. Tapi sayangnya, fitur itu adalah salah satu penyebab utama terjadinya bug dan data race yang sulit dilacak saat program berjalan di banyak thread. Rust punya prinsip: keselamatan memori tanpa garbage collector. Kompilator Rust sangat ketat (dikenal dengan borrow checker) dan secara standar melarang mutasi pada variabel global (static mut) karena itu dianggap tidak aman dan berisiko tinggi menyebabkan bentrok antar thread. Oleh karena itu, kita butuh lazy_static. Pustaka ini membantu kita membuat variabel global yang inisialisasinya ditunda sampai variabel itu pertama kali dipanggil saat runtime. Di dalamnya, kita membungkus tipe data kita (seperti Vec atau DashMap) dengan pelindung thread-safe seperti RwLock atau Mutex, sehingga kompilator Rust bisa yakin 100% bahwa datanya aman untuk diakses dan diubah secara paralel.
+
 #### Reflection Subscriber-2
+
+
